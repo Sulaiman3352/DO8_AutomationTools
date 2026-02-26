@@ -20,10 +20,10 @@ The goal was to build a fully automated infrastructure using **Ansible** for con
 The first part of the project focused on automating remote node configuration using Ansible. The infrastructure consists of three virtual machines:
 
 ```
-┌────────────────┐       SSH        ┌────────────────┐
+┌────────────────┐       SSH       ┌───────────────┐
 │   manager01    │  ────────────►  │     node01    │
 │ (Ansible Ctrl) │                 │  (Docker/App) │
-└────────────────┘                 └────────────────┘
+└────────────────┘                 └───────────────┘
         │
         │ SSH
         ▼
