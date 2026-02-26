@@ -1,0 +1,50 @@
+---
+- name: Install dependencies for HashiCorp repository
+  apt:
+    name:
+      - gpg
+      - coreutils
+      - curl
+      - lsb-release
+    state: present
+    update_cache: yes
+
+- name: Add HashiCorp GPG key
+  apt_key:
+    url: https://apt.releases.hashicorp.com/gpg
+    state: present
+
+- name: Add HashiCorp repository
+  apt_repository:
+    repo: "deb [arch=amd64] https://apt.releases.hashicorp.com {{ ansible_distribution_release }} main"
+    state: present
+
+- name: Install Consul package
+  apt:
+    name: consul
+    state: present
+    update_cache: yes
+
+- name: Ensure Consul configuration directory exists
+  file:
+    path: /etc/consul.d
+    state: directory
+    owner: consul
+    group: consul
+    mode: '0755'
+
+- name: Copy consul_server.hcl configuration
+  # This path assumes the file is in the synced consul01 folder on the manager node
+  copy:
+    src: /home/vagrant/consul01/consul_server.hcl
+    dest: /etc/consul.d/consul.hcl
+    owner: consul
+    group: consul
+    mode: '0644'
+
+- name: Enable and start Consul service
+  systemd:
+    name: consul
+    state: started
+    enabled: yes
+  async: 180  # Maximum time to wait (in seconds)

@@ -1,0 +1,6 @@
+---
+- name: Setup api machine
+  hosts: api
+  become: yes
+  roles:
+    - install_hotels_service

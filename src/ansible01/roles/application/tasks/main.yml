@@ -1,0 +1,13 @@
+---
+- name: build the microservice from services folder
+  become: yes
+  command: docker compose build
+  args:
+    chdir: /home/vagrant/services
+
+- name: Deploy the microservice
+  become: yes
+  command: docker compose up -d 
+  args:
+    chdir: /home/vagrant/services
+

@@ -1,0 +1,82 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    
+- name: Install ACL support for become_user
+  apt:
+    name: acl
+    state: present
+    update_cache: yes
+
+- name: Install postgresql-common
+  apt:
+    name:
+      - postgresql
+      - postgresql-contrib
+      - python3-psycopg2
+    state: present
+
+- name: start & enable postgresql
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Ensure PostgreSQL is running and enabled
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+
+- name: Wait for PostgreSQL to accept connections
+  become: yes
+  command: pg_isready
+  register: pg_status
+  until: pg_status.rc == 0
+  retries: 10
+  delay: 2
+
+- name: Create database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: test_db
+    state: present
+    login_unix_socket: /var/run/postgresql   # common socket directory
+
+- name: Create an arbitrary table
+  become: yes
+  become_user: postgres
+  postgresql_query:
+    db: test_db
+    query: >
+      CREATE TABLE IF NOT EXISTS employees (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(50),
+        department VARCHAR(50)
+      );
+    login_unix_socket: /var/run/postgresql   # common socket directory
+
+- name: Insert three arbitrary records
+  become: yes
+  become_user: postgres
+  postgresql_query:
+    db: test_db
+    query: >
+      INSERT INTO employees (name, department) VALUES 
+      ('Anton', 'Engineering'),
+      ('Yussif', 'Sales'),
+      ('Ahmed', 'Marketing');
+      
+- name: Configure PostgreSQL to accept connections
+  lineinfile:
+    path: /etc/postgresql/16/main/postgresql.conf
+    regexp: "^#listen_addresses"
+    line: "listen_addresses = '*'"
+  notify: restart postgresql
+
+- name: Configure PostgreSQL authentication
+  lineinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf
+    line: "host    all             all             0.0.0.0/0               md5"
+  notify: restart postgresql

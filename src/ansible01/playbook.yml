@@ -1,0 +1,15 @@
+---
+- name: Install Docker on Application Node
+  hosts: node01            # Only Node01 needs Docker for the microservice
+  become: yes
+  roles:
+    - docker
+    - application
+
+- name: Configure web & Database server on node02
+  hosts: node02
+  become: yes
+  roles:
+    - apache
+    - postgres
+

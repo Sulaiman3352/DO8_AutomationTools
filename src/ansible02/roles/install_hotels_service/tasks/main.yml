@@ -1,0 +1,52 @@
+---
+- name: Install Java 21 and Maven
+  apt:
+    name:
+      - openjdk-21-jdk
+      - maven
+    state: present
+    update_cache: yes
+  tags: packages
+
+- name: Copy hotel service source code
+  copy:
+    src: /home/vagrant/services/hotel-service
+    dest: /opt/
+    owner: vagrant
+    group: vagrant
+  notify: Rebuild and restart hotel service
+  tags: code
+
+- name: Check if JAR file exists
+  stat:
+    path: /opt/hotel-service/target/hotel-service-0.0.1-SNAPSHOT.jar
+  register: jar_file
+  tags: build
+
+- name: Build hotel service with Maven
+  shell: mvn clean package -DskipTests
+  args:
+    chdir: /opt/hotel-service
+  become_user: vagrant
+  environment:
+    JAVA_HOME: /usr/lib/jvm/java-21-openjdk-amd64
+  when: not jar_file.stat.exists
+  tags: build
+
+- name: Deploy hotel-service systemd unit
+  template:  
+    src: hotel-service.service.j2
+    dest: /etc/systemd/system/hotel-service.service
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload systemd and restart hotel service
+  tags: systemd
+
+- name: Ensure hotel service is running and enabled
+  systemd:
+    name: hotel-service
+    enabled: yes
+    state: started
+    daemon_reload: yes
+  tags: service

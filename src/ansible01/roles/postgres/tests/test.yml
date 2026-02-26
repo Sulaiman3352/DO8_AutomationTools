@@ -1,0 +1,12 @@
+- name: Test PostgreSQL installation
+  hosts: all
+  tasks:
+    - name: Check if postgres is installed
+      command: psql --version
+      register: pg_version
+      changed_when: false
+      failed_when: pg_version.rc != 0
+
+    - debug:
+        var: pg_version.stdout
+

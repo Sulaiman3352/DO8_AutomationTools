@@ -1,0 +1,8 @@
+---
+# handlers file for install_hotels_service
+
+- name: Reload systemd and restart hotel service
+  systemd:
+    daemon_reload: yes
+    name: hotel-service
+    state: restarted

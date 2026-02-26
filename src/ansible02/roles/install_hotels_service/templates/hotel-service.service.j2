@@ -1,0 +1,19 @@
+[Unit]
+Description=Hotel Service
+After=network.target
+
+[Service]
+Type=simple
+User=vagrant
+WorkingDirectory=/opt/hotel-service
+Environment=POSTGRES_HOST={{ postgres_host | default('192.168.56.13') }}
+Environment=POSTGRES_PORT={{ postgres_port | default('5432') }}
+Environment=POSTGRES_DB={{ postgres_db | default('hotels_db') }}
+Environment=POSTGRES_USER={{ postgres_user | default('postgres') }}
+Environment=POSTGRES_PASSWORD={{ postgres_password | default('postgres') }}
+ExecStart=/usr/bin/java -jar /opt/hotel-service/target/hotel-service-0.0.1-SNAPSHOT.jar
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
