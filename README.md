@@ -23,7 +23,7 @@ The first part of the project focused on automating remote node configuration us
 ┌────────────────┐       SSH       ┌───────────────┐
 │   manager01    │  ────────────►  │     node01    │
 │ (Ansible Ctrl) │                 │  (Docker/App) │
-└────────────────┘                 └───────────────┘
+└────────────────┘                 └────────────────┘
         │
         │ SSH
         ▼
@@ -44,11 +44,11 @@ The second part implemented service discovery using Consul, allowing services to
 ```
 ┌─────────────────┐      ┌──────────────────┐      ┌────────────────┐
 │  consulserver   │      │       api        │      │       db       │
+│                 │      │ (hotel-service)  │      │  (PostgreSQL)  │
 │                 │      │        |         │      │       |        │
-│                 │      │        ▼         │      │       ▼        │
-│(Consul  Server) │      │  (hotel-service  │      │  (PostgreSQL   │
-│                 │      │   + Consul Agent)│ ◄──► │   + Consul     │
-│                 │      │                  │      │    Agent)      │
+│(Consul  Server) │      │        ▼         │      │       ▼        │
+│                 │      │ +(Consul Agent)  │ ◄──► │ +(Consul Agent)│
+│                 │      │                  │      │                │
 └─────────────────┘      └──────────────────┘      └────────────────┘
         ▲                          ▲                        ▲
         │                          │                        │
