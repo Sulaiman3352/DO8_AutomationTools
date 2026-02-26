@@ -23,7 +23,7 @@ The first part of the project focused on automating remote node configuration us
 ┌────────────────┐       SSH       ┌───────────────┐
 │   manager01    │  ────────────►  │     node01    │
 │ (Ansible Ctrl) │                 │  (Docker/App) │
-└────────────────┘                 └────────────────┘
+└────────────────┘                 └───────────────┘
         │
         │ SSH
         ▼
