@@ -128,11 +128,22 @@ ansible all -m ping
 
 This simple test confirms SSH connectivity and Python availability on all target machines.
 
+### Part 1: Docker Automation with Ansible
+
+In the first part of the project, we deploy microservices using **Docker Compose** on node01. The Docker role installs Docker, and the application role builds and runs the containers.
+
 ---
 
-### Part 2: Docker Automation with Ansible
+### Part 2: Native Java Deployment with Consul
 
-#### The Docker Role
+The second part takes a different approach — instead of containers, we deploy the hotel service as a **native Java application** directly on the API node. This demonstrates both containerized and traditional deployment patterns:
+
+- **Part 1 (Docker)**: Microservices run in containers via Docker Compose
+- **Part 2 (Native)**: Hotel service runs directly as a Java process (java -jar)
+
+This contrast showcases Ansible's flexibility in managing different types of workloads.
+
+---
 
 The first major playbook installs Docker on the application node. Instead of using shell scripts, we leverage Ansible's apt module for idempotent package installation:
 
@@ -297,6 +308,8 @@ ports {
 }
 ```
 
+**Note on Consul Connect:** The `connect` block enables Consul Connect (service mesh), which provides automatic mTLS between services via Envoy sidecar proxies. In this implementation, Connect is enabled in the configuration but not fully utilized — services communicate directly rather than through sidecar proxies. This represents an enhancement opportunity for production deployments requiring encrypted service-to-service communication.
+
 The server listens on port 8500 for the web UI and API, and port 8600 for DNS-based service discovery.
 
 #### Consul Client Configuration
@@ -314,9 +327,11 @@ bind_addr = "{{ GetInterfaceIP \"enp0s8\" }}"
 advertise_addr = "{{ GetInterfaceIP \"enp0s8\" }}"
 
 connect {
-  enabled = true
+  enabled: true
 }
 ```
+
+**Note on Consul Connect:** As with the server configuration, Consul Connect is enabled here to support future mTLS-based service communication via Envoy sidecar proxies. Currently, services communicate directly without encryption.
 
 The template uses Consul's interpolation to dynamically bind to the correct network interface on each machine.
 
@@ -343,7 +358,7 @@ The install_db role installs PostgreSQL and creates the hotels database:
 
 #### Hotel Service Role
 
-The install_hotels_service role handles the Java application:
+The install_hotels_service role handles deploying the Java application directly (not containerized):
 
 ```yaml
 - name: Copy hotel service source
@@ -372,10 +387,33 @@ The install_hotels_service role handles the Java application:
   args:
     chdir: /opt/hotel-service
 
-- name: Run the service
-  command: java -jar /opt/hotel-service/target/hotel-service-0.0.1-SNAPSHOT.jar
-  daemonize: yes
+- name: Create systemd service for hotel service
+  copy:
+    dest: /etc/systemd/system/hotel-service.service
+    content: |
+      [Unit]
+      Description=Hotel Service
+      After=network.target postgresql.service
+
+      [Service]
+      Type=simple
+      User=vagrant
+      WorkingDirectory=/opt/hotel-service
+      ExecStart=/usr/bin/java -jar /opt/hotel-service/target/hotel-service-0.0.1-SNAPSHOT.jar
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Start and enable hotel service
+  systemd:
+    name: hotel-service
+    state: started
+    enabled: yes
+    daemon_reload: yes
 ```
+
+**Note on PostgreSQL Connection:** Currently, the application connects directly to the database using the fixed IP `127.0.0.1`. With full Consul integration, this would instead use Consul's DNS-based service discovery (e.g., `POSTGRES_HOST=db.service.consul`) to dynamically resolve the database address. This is a planned enhancement for production environments.
 
 #### Complete Site Playbook
 
@@ -474,6 +512,18 @@ Consul provides the foundation for dynamic microservice architectures. Services 
 **Problem:** The hotel service needed database connection details without hardcoding IP addresses.
 
 **Solution:** Used Ansible's lineinfile module to set environment variables (POSTGRES_HOST, POSTGRES_PORT, etc.) that the application reads at runtime.
+
+### Challenge 6: Java Application Lifecycle Management
+
+**Problem:** Running a Java application in the background using Ansible's daemonize is unreliable and doesn't integrate with system startup.
+
+**Solution:** Created a systemd service unit file to properly manage the Java application lifecycle, enabling automatic restart on failure and startup on boot.
+
+### Challenge 7: Consul Service Discovery Integration
+
+**Problem:** The database connection currently uses a hardcoded IP address (127.0.0.1), defeating the purpose of Consul's service discovery.
+
+**Solution (Future Enhancement):** For production, the application would use Consul's DNS (e.g., `db.service.consul`) to dynamically discover the database, allowing the database to move without reconfiguring the application.
 
 ---
 
